@@ -1,6 +1,6 @@
 'use client';
 
-import React, { MouseEvent, useState } from 'react';
+import React, { MouseEvent, TouchEvent, useState } from 'react';
 import Image, { StaticImageData, ImageProps as NextImageProps } from 'next/image';
 
 interface ImageEffectProps extends NextImageProps {
@@ -27,7 +27,7 @@ const ImageEffect: React.FC<ImageEffectProps> = ({
     const { width, height } = element.getBoundingClientRect();
     setImageSize({ width, height });
     setZoomable(true);
-    updatePosition(e);
+    updatePosition(e.clientX, e.clientY, element);
   };
 
   const handleMouseLeave = () => {
@@ -35,16 +35,34 @@ const ImageEffect: React.FC<ImageEffectProps> = ({
   };
 
   const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
-    updatePosition(e);
+    updatePosition(e.clientX, e.clientY, e.currentTarget);
   };
 
-  const updatePosition = (e: MouseEvent<HTMLDivElement>) => {
-    const { left, top } = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - left;
-    const y = e.clientY - top;
+  const handleTouchStart = (e: TouchEvent<HTMLDivElement>) => {
+    const element = e.currentTarget;
+    const { width, height } = element.getBoundingClientRect();
+    setImageSize({ width, height });
+    setZoomable(true);
+    const touch = e.touches[0];
+    updatePosition(touch.clientX, touch.clientY, element);
+  };
+
+  const handleTouchMove = (e: TouchEvent<HTMLDivElement>) => {
+    const touch = e.touches[0];
+    updatePosition(touch.clientX, touch.clientY, e.currentTarget);
+  };
+
+  const handleTouchEnd = () => {
+    setZoomable(false);
+  };
+
+  const updatePosition = (clientX: number, clientY: number, element: HTMLElement) => {
+    const { left, top } = element.getBoundingClientRect();
+    const x = clientX - left;
+    const y = clientY - top;
     setPosition({
-      x: (x * zoomLevel - magnifierSize / 2),
-      y: (y * zoomLevel - magnifierSize / 2),
+      x: x * zoomLevel - magnifierSize / 2,
+      y: y * zoomLevel - magnifierSize / 2,
       mouseX: x - magnifierSize / 2,
       mouseY: y - magnifierSize / 2,
     });
@@ -52,16 +70,18 @@ const ImageEffect: React.FC<ImageEffectProps> = ({
 
   const imageUrl = typeof src === 'string' ? src : (src as StaticImageData).src;
 
-
   return (
     <div
       onMouseLeave={handleMouseLeave}
       onMouseEnter={handleMouseEnter}
       onMouseMove={handleMouseMove}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
       className={`${className} relative overflow-hidden`}
     >
       <Image
-        className={`object-cover  border w-full z-10 ${className}`}
+        className={`object-cover border w-full z-10 ${className}`}
         alt={alt}
         src={src}
         {...imageProps} // Apply any additional props here
